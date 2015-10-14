@@ -247,5 +247,3 @@ cell_get_state(){
 }
 
 main
-
-# Super nice article for the shit: http://landoflinux.com/linux_bash_scripting_substring_tests.html
