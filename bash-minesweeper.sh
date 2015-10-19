@@ -78,8 +78,8 @@ initialize(){
   # Randomize Mines
   for (( i = 0; i < bwidth; i++ )); do
     for (( j = 0; j < bheight; j++ )); do
-      rx=$(( RANDOM % bwidth ))
-      ry=$(( RANDOM % bheight ))
+      rx=$((RANDOM % bwidth))
+      ry=$((RANDOM % bheight))
       swap_tmp=`cell_get_is_mine $i $j`
       cell_set_is_mine $i $j "`cell_get_is_mine $rx $ry`"
       cell_set_is_mine $rx $ry $swap_tmp
@@ -116,10 +116,7 @@ print_board(){
   for (( i = 0; i < bwidth; i++ )); do
     printf "\e[90m%4d\e[0m " $i
     for (( j = 0; j < bheight; j++ )); do
-      s=`cell_get_state $i $j`
-      if (( mshow == 1 )); then
-        s=s
-      fi
+      s=$( [ $mshow == 1 ]  && echo s || echo `cell_get_state $i $j` )
       cell_char=.
       case $s in
         s)
@@ -144,6 +141,37 @@ print_board(){
   done
 }
 
+# Check if tclicked player has won the game, which occurs when the player
+# has clicked all non-mine cells.
+check_win(){
+  local out=1
+  for (( i = 0; i < bwidth; i++ )); do
+    for (( j = 0; j < bheight; j++ )); do
+      s=`cell_get_state $j $i`
+      m=`cell_get_is_mine $j $i`
+      if [[ $s == "h" ]] && (( m == 0 )); then
+        out=0
+      fi
+    done
+  done
+
+  if (( out == 1 )); then
+    print_board
+    echo -e " --- \e[32mCongratulations\e[0m! You've Won! --- "
+    ask_replay
+  fi
+}
+
+ask_replay(){
+  echo -n "Play again? [Y/n] "
+  read again
+  if [[ $again == "n" ]]; then
+    cmd=5
+  else
+    initialize
+  fi
+}
+
 do_click(){
   echo -n "Enter cell column to click: "
   read click_x
@@ -159,13 +187,15 @@ do_click(){
       mshow=1
       print_board
       echo " --- GAME OVER --- "
-      initialize
+      ask_replay
     else
       click_cell $click_y $click_x
     fi
   else
     echo "Error: this cell is already clicked"
   fi
+
+  check_win
 
 }
 
