@@ -11,11 +11,12 @@ CELL_STATE=2
 CELL_CHARACTER=3
 CELL_EXISTS=4
 CELL_COLORS="32:34:95:96:36:37:37:96"
+GAME_EXIT=6
 
 main(){
   initialize
 
-  while [[ cmd -ne 5 ]]; do
+  while [[ cmd -ne GAME_EXIT ]]; do
     print_board
     echo -ne "Minesweeper Menu
 ---
@@ -23,7 +24,8 @@ main(){
   [2] Show / Hide Mines
   [3] Click Cell
   [4] Flag Cell
-  [5] Quit\nEnter a choice: "
+  [5] Enter Command String
+  [6] Quit\nEnter a choice: "
     read cmd
 
     case $cmd in
@@ -42,6 +44,9 @@ main(){
         ;;
       4)
         do_flag
+        ;;
+      5)
+        take_command
         ;;
         
     esac
@@ -137,8 +142,13 @@ print_board(){
       esac
       echo -ne " $cell_char "
     done
-    echo 
+    echo -e " \e[90m$i\e[0m"
   done
+  echo -n "     "
+  for (( i = 0; i < bheight; i++ )); do
+    printf "\e[90m%2d\e[0m " $i
+  done
+  echo
 }
 
 # Check if tclicked player has won the game, which occurs when the player
@@ -166,7 +176,7 @@ ask_replay(){
   echo -n "Play again? [Y/n] "
   read again
   if [[ $again == "n" ]]; then
-    cmd=5
+    cmd=GAME_EXIT
   else
     initialize
   fi
@@ -206,14 +216,19 @@ do_flag(){
   echo -n "Enter cell row to flag: "
   read click_y
 
-  if cell_exists $click_y $click_x; then
-    s=`cell_get_state $click_y $click_x`
+  flag_cell $click_y $click_x
+
+}
+
+flag_cell(){
+  if cell_exists $2 $1; then
+    s=`cell_get_state $2 $1`
     if [[ $s == 's' ]]; then
       echo "You cannot flag a cell that is already shown"
     elif [[ $s == 'f' ]]; then
-      cell_set_state $click_y $click_x h
+      cell_set_state $2 $1 h
     else
-      cell_set_state $click_y $click_x f
+      cell_set_state $2 $1 f
     fi
   else
     echo "Error: Cell does not exist"
@@ -249,6 +264,34 @@ cell_exists(){
   else
     return 0
   fi
+}
+
+take_command(){
+  echo -n "Enter a command: "
+  read line_command
+
+  line_arr=(${line_command})
+  line_command_length=$(( ${#line_arr[@]} / 3 ))
+
+  for (( i = 0; i < line_command_length; i++ )); do
+    c=${line_arr[i*3]}
+    col=${line_arr[i*3+1]}
+    row=${line_arr[i*3+2]}
+    case $c in
+      c)
+        click_cell $row $col
+        ;;
+      f)
+        flag_cell $col $row
+        ;;
+      *)
+        echo "$c: unrecognized command"
+        ;;
+    esac
+  done
+
+  check_win
+  
 }
 
 # Cell Mutators and Accessors
